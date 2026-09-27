@@ -1,0 +1,35 @@
+/* should not generate diagnostics */
+
+// the return is the only statement of an unbraced if
+function a(aborted) {
+    if (aborted) return;
+}
+
+// the return is the only statement of an unbraced else
+function b(aborted) {
+    if (aborted) doSomething(); else return;
+}
+function b2(aborted) {
+    if (aborted) doSomething();
+    else return;
+}
+
+// the return is the only statement of an unbraced else if
+function c(aborted) {
+    if (aborted) {
+        doSomething();
+    } else if (other) return;
+}
+
+// the return is the whole body of a labeled statement
+function d() {
+    label: return;
+}
+
+// the return is not the last statement of the unbraced if
+function e(aborted) {
+    if (aborted) {
+        return;
+        doSomething();
+    }
+}

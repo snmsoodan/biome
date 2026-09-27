@@ -1,0 +1,143 @@
+---
+source: crates/biome_js_analyze/tests/spec_tests.rs
+expression: comments.js
+---
+# Input
+```js
+/* should generate diagnostics */
+
+// the comment that leads the removed return is kept
+function a() {
+    // best effort: nothing to do
+    return;
+}
+
+// the comment that leads the removed return inside a block is kept
+function b() {
+    if (condition) {
+        // nothing else to do here
+        return;
+    }
+}
+
+// the comment that trails the removed return is kept
+function c() {
+    return; // nothing else to do here
+}
+
+// the comment that leads the removed return at the end of a block is kept
+function d() {
+    doSomething();
+    // nothing left to do
+    return;
+}
+
+```
+
+# Diagnostics
+```
+comments.js:6:5 lint/complexity/noUselessReturn  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This return statement is unnecessary.
+  
+    4 │ function a() {
+    5 │     // best effort: nothing to do
+  > 6 │     return;
+      │     ^^^^^^^
+    7 │ }
+    8 │ 
+  
+  i Removing this statement does not change the control flow of the function.
+  
+  i Safe fix: Remove the unnecessary return statement.
+  
+     3  3 │   // the comment that leads the removed return is kept
+     4  4 │   function a() {
+     5    │ - ····//·best·effort:·nothing·to·do
+     6    │ - ····return;
+        5 │ + ····//·best·effort:·nothing·to·do
+     7  6 │   }
+     8  7 │   
+  
+
+```
+
+```
+comments.js:13:9 lint/complexity/noUselessReturn  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This return statement is unnecessary.
+  
+    11 │     if (condition) {
+    12 │         // nothing else to do here
+  > 13 │         return;
+       │         ^^^^^^^
+    14 │     }
+    15 │ }
+  
+  i Removing this statement does not change the control flow of the function.
+  
+  i Safe fix: Remove the unnecessary return statement.
+  
+    10 10 │   function b() {
+    11 11 │       if (condition) {
+    12    │ - ········//·nothing·else·to·do·here
+    13    │ - ········return;
+       12 │ + ········//·nothing·else·to·do·here
+    14 13 │       }
+    15 14 │   }
+  
+
+```
+
+```
+comments.js:19:5 lint/complexity/noUselessReturn  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This return statement is unnecessary.
+  
+    17 │ // the comment that trails the removed return is kept
+    18 │ function c() {
+  > 19 │     return; // nothing else to do here
+       │     ^^^^^^^
+    20 │ }
+    21 │ 
+  
+  i Removing this statement does not change the control flow of the function.
+  
+  i Safe fix: Remove the unnecessary return statement.
+  
+    17 17 │   // the comment that trails the removed return is kept
+    18 18 │   function c() {
+    19    │ - ····return;·//·nothing·else·to·do·here
+       19 │ + ····//·nothing·else·to·do·here
+    20 20 │   }
+    21 21 │   
+  
+
+```
+
+```
+comments.js:26:5 lint/complexity/noUselessReturn  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This return statement is unnecessary.
+  
+    24 │     doSomething();
+    25 │     // nothing left to do
+  > 26 │     return;
+       │     ^^^^^^^
+    27 │ }
+    28 │ 
+  
+  i Removing this statement does not change the control flow of the function.
+  
+  i Safe fix: Remove the unnecessary return statement.
+  
+    23 23 │   function d() {
+    24 24 │       doSomething();
+    25    │ - ····//·nothing·left·to·do
+    26    │ - ····return;
+       25 │ + ····//·nothing·left·to·do
+    27 26 │   }
+    28 27 │   
+  
+
+```
