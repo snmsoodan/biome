@@ -1,12 +1,12 @@
 use biome_analyze::{Ast, FixKind, Rule, RuleDiagnostic, RuleSource, context::RuleContext, declare_lint_rule};
 use biome_console::markup;
 use biome_js_syntax::{
-    AnyTsType, JsDoWhileStatement, JsFinallyClause, JsForInStatement, JsForOfStatement,
-    JsForStatement, JsFunctionBody, JsReturnStatement, JsStatementList, JsSwitchStatement,
-    JsWhileStatement,
+    AnyFunctionLike, AnyTsType, JsDoWhileStatement, JsFinallyClause, JsForInStatement,
+    JsForOfStatement, JsForStatement, JsFunctionBody, JsReturnStatement, JsStatementList,
+    JsSwitchStatement, JsWhileStatement,
 };
 use biome_languages::JsFileSource;
-use biome_rowan::{AstNode, AstNodeList, BatchMutationExt};
+use biome_rowan::{AstNode, AstNodeList, AstSeparatedList, BatchMutationExt};
 use biome_rule_options::no_useless_return::NoUselessReturnOptions;
 
 use crate::JsRuleAction;
@@ -259,31 +259,71 @@ fn is_tail_position(
 ///
 /// Removing such a statement makes the compiler report an error when:
 /// - the enclosing function declares a return type other than `void`, `undefined`
-///   or `any` (TS2355, TS2366, or TS7030 when `noImplicitReturns` is enabled); or
+///   or `any` (TS2355, TS2366, or TS7030 when `noImplicitReturns` is enabled);
+/// - the enclosing function is `async` and declares a return type other than
+///   `Promise<void>`, `Promise<undefined>` or `Promise<any>`, because such a
+///   function can no longer fall through; or
 /// - the function has no declared return type, but one of its `return` statements
 ///   returns a value, so its return type is inferred as non-`void` and the
 ///   fallthrough created by the removal is reported by `noImplicitReturns` (TS7030).
 fn is_required_by_type_checker(
     function_root: &biome_rowan::SyntaxNode<biome_js_syntax::JsLanguage>,
 ) -> bool {
-    let return_type = AnyJsFunctionMethodWithReturnType::cast_ref(function_root)
-        .and_then(|function| function.return_type());
+    let Some(function) = AnyJsFunctionMethodWithReturnType::cast_ref(function_root) else {
+        return returns_value(function_root);
+    };
+    let Some(declared_type) = function
+        .return_type()
+        .and_then(|return_type| return_type.as_any_ts_type().cloned())
+        .map(AnyTsType::omit_parentheses)
+    else {
+        return returns_value(function_root);
+    };
 
-    match return_type {
-        // A declared return type other than `void`, `undefined` and `any` cannot be
-        // satisfied by an implicit fallthrough.
-        Some(return_type) => !matches!(
-            return_type
-                .as_any_ts_type()
-                .cloned()
-                .map(AnyTsType::omit_parentheses),
-            Some(
-                AnyTsType::TsVoidType(_) | AnyTsType::TsUndefinedType(_) | AnyTsType::TsAnyType(_)
-            )
-        ),
-        // Without a declaration, the return type is inferred from the return statements.
-        None => returns_value(function_root),
+    // For an `async` function the annotation describes the resolved value, so
+    // an implicit fallthrough is still allowed by `Promise<void>`,
+    // `Promise<undefined>` and `Promise<any>`. The same annotation on a
+    // non-`async` function (`function f(): Promise<void>`) rejects returning
+    // nothing, so the `Promise` wrapper is only unwrapped for `async` functions.
+    let declared_type = if is_async(&function) {
+        promise_type_argument(&declared_type).unwrap_or(declared_type)
+    } else {
+        declared_type
+    };
+
+    !matches!(
+        declared_type,
+        AnyTsType::TsVoidType(_) | AnyTsType::TsUndefinedType(_) | AnyTsType::TsAnyType(_)
+    )
+}
+
+/// Check whether the given function is declared with `async`.
+///
+/// Getter members are not part of `AnyFunctionLike` and cannot be `async`.
+fn is_async(function: &AnyJsFunctionMethodWithReturnType) -> bool {
+    AnyFunctionLike::cast_ref(function.syntax()).is_some_and(|function| function.is_async())
+}
+
+/// Return the type argument of a `Promise<T>` type, if the given type is such a reference.
+///
+/// Returns `None` for any other type, including a qualified name such as
+/// `globalThis.Promise<T>` or a `Promise` reference with more than one type argument.
+fn promise_type_argument(ty: &AnyTsType) -> Option<AnyTsType> {
+    let reference = ty.as_ts_reference_type()?;
+    if !reference
+        .name()
+        .ok()?
+        .as_js_reference_identifier()?
+        .has_name("Promise")
+    {
+        return None;
     }
+    let mut arguments = reference.type_arguments()?.ts_type_argument_list().iter();
+    let argument = arguments.next()?.ok()?;
+    if arguments.next().is_some() {
+        return None;
+    }
+    Some(argument.omit_parentheses())
 }
 
 /// Check whether the given function contains a `return` statement that returns a value.

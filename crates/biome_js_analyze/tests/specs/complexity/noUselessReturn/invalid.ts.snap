@@ -46,6 +46,22 @@ export async function inferredAsyncVoid() {
     return;
 }
 
+// An implicit fallthrough of an async function resolving `void` or `any` is allowed.
+export async function explicitAsyncVoid(): Promise<void> {
+    await Promise.resolve();
+    return;
+}
+
+export async function explicitAsyncAny(): Promise<any> {
+    await Promise.resolve();
+    return;
+}
+
+export async function explicitAsyncUndefined(): Promise<undefined> {
+    await Promise.resolve();
+    return;
+}
+
 ```
 
 # Diagnostics
@@ -170,6 +186,81 @@ invalid.ts:40:5 lint/complexity/noUselessReturn  FIXABLE  ━━━━━━━�
     40    │ - ····return;
     41 40 │   }
     42 41 │   
+  
+
+```
+
+```
+invalid.ts:46:5 lint/complexity/noUselessReturn  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This return statement is unnecessary.
+  
+    44 │ export async function explicitAsyncVoid(): Promise<void> {
+    45 │     await Promise.resolve();
+  > 46 │     return;
+       │     ^^^^^^^
+    47 │ }
+    48 │ 
+  
+  i Removing this statement does not change the control flow of the function.
+  
+  i Safe fix: Remove the unnecessary return statement.
+  
+    44 44 │   export async function explicitAsyncVoid(): Promise<void> {
+    45 45 │       await Promise.resolve();
+    46    │ - ····return;
+    47 46 │   }
+    48 47 │   
+  
+
+```
+
+```
+invalid.ts:51:5 lint/complexity/noUselessReturn  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This return statement is unnecessary.
+  
+    49 │ export async function explicitAsyncAny(): Promise<any> {
+    50 │     await Promise.resolve();
+  > 51 │     return;
+       │     ^^^^^^^
+    52 │ }
+    53 │ 
+  
+  i Removing this statement does not change the control flow of the function.
+  
+  i Safe fix: Remove the unnecessary return statement.
+  
+    49 49 │   export async function explicitAsyncAny(): Promise<any> {
+    50 50 │       await Promise.resolve();
+    51    │ - ····return;
+    52 51 │   }
+    53 52 │   
+  
+
+```
+
+```
+invalid.ts:56:5 lint/complexity/noUselessReturn  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  i This return statement is unnecessary.
+  
+    54 │ export async function explicitAsyncUndefined(): Promise<undefined> {
+    55 │     await Promise.resolve();
+  > 56 │     return;
+       │     ^^^^^^^
+    57 │ }
+    58 │ 
+  
+  i Removing this statement does not change the control flow of the function.
+  
+  i Safe fix: Remove the unnecessary return statement.
+  
+    54 54 │   export async function explicitAsyncUndefined(): Promise<undefined> {
+    55 55 │       await Promise.resolve();
+    56    │ - ····return;
+    57 56 │   }
+    58 57 │   
   
 
 ```

@@ -39,3 +39,19 @@ export async function inferredAsyncVoid() {
     await Promise.resolve();
     return;
 }
+
+// An implicit fallthrough of an async function resolving `void` or `any` is allowed.
+export async function explicitAsyncVoid(): Promise<void> {
+    await Promise.resolve();
+    return;
+}
+
+export async function explicitAsyncAny(): Promise<any> {
+    await Promise.resolve();
+    return;
+}
+
+export async function explicitAsyncUndefined(): Promise<undefined> {
+    await Promise.resolve();
+    return;
+}
